@@ -6,6 +6,9 @@ import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.contractFilePathsFrom
 
 class SpecmaticConfig {
+    val configFilePath: String
+        get() = Configuration.configFilePath
+
     fun contractStubPaths(useCurrentBranchForCentralRepo: Boolean = false): List<String> {
         return contractFilePathsFrom(
             Configuration.configFilePath, 
@@ -28,5 +31,13 @@ class SpecmaticConfig {
             DEFAULT_WORKING_DIRECTORY,
             useCurrentBranchForCentralRepo
         ) { source -> source.stubContracts }
+    }
+
+    fun contractTestPathData(useCurrentBranchForCentralRepo: Boolean = false): List<ContractPathData> {
+        return contractFilePathsFrom(
+            Configuration.configFilePath,
+            DEFAULT_WORKING_DIRECTORY,
+            useCurrentBranchForCentralRepo
+        ) { source -> source.testContracts }
     }
 }

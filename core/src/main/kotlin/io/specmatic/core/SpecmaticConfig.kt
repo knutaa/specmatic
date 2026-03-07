@@ -9,8 +9,10 @@ import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.SpecmaticGlobalSettings
 import io.specmatic.core.config.SpecmaticSpecConfig
 import io.specmatic.core.config.Switch
+import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.ContractSource
 import io.specmatic.core.utilities.ContractSourceEntry
+import io.specmatic.core.utilities.contractFilePathsFrom
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import io.specmatic.reporter.ctrf.model.CtrfSpecConfig
@@ -426,6 +428,17 @@ interface SpecmaticConfig {
 
     // TODO: REVIEW
     fun getSecurityConfiguration(specFile: File): SecurityConfiguration?
+
+    val configFilePath: String
+        get() = Configuration.configFilePath
+
+    fun contractTestPathData(useCurrentBranchForCentralRepo: Boolean = false): List<ContractPathData> {
+        return contractFilePathsFrom(
+            Configuration.configFilePath,
+            DEFAULT_WORKING_DIRECTORY,
+            useCurrentBranchForCentralRepo
+        ) { source -> source.testContracts }
+    }
 
     companion object {
         operator fun invoke(): SpecmaticConfig = SpecmaticConfigV1V2Common()

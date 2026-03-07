@@ -55,6 +55,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.14.2")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.14.2")
     testImplementation("io.kotest:kotest-assertions-core-jvm:6.1.2")
+    testImplementation("io.kotest:kotest-property-jvm:6.1.2")
 
 }
 

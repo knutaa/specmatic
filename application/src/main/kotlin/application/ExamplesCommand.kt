@@ -4,14 +4,21 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.config.LoggingConfiguration
 import io.specmatic.core.examples.module.*
+import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import io.specmatic.core.examples.server.ScenarioFilter
+import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.configureLogging
+import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.capitalizeFirstChar
+import io.specmatic.core.utilities.consolePrintableURL
+import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.license.core.cli.Category
 import io.specmatic.stub.isOpenAPI
 import picocli.CommandLine.*
 import java.io.File
+import java.lang.Thread.sleep
 import java.util.concurrent.Callable
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -22,7 +29,7 @@ private const val FAILURE_EXIT_CODE = 1
     name = "examples",
     mixinStandardHelpOptions = true,
     description = ["Validate inline and externalised examples"],
-    subcommands = [ExamplesCommand.Validate::class]
+    subcommands = [ExamplesCommand.Validate::class, ExamplesCommand.Interactive::class]
 )
 @Category("Specmatic core")
 class ExamplesCommand : Callable<Int> {
@@ -315,6 +322,111 @@ https://docs.specmatic.io/documentation/contract_tests.html#supported-filters--o
             return this.any { it.value is Result.Failure }
         }
 
+    }
+
+    @Command(
+        name = "interactive",
+        mixinStandardHelpOptions = true,
+        description = ["Run the example generation interactively"]
+    )
+    class Interactive : Callable<Unit> {
+        @Option(
+            names = ["--filter"],
+            description = [
+                """
+Filter tests matching the specified filtering criteria
+
+You can filter tests based on the following keys:
+- `METHOD`: HTTP methods (e.g., GET, POST)
+- `PATH`: Request paths (e.g., /users, /product)
+- `STATUS`: HTTP response status codes (e.g., 200, 400)
+           """
+            ],
+            required = false
+        )
+        var filter: String = ""
+
+        @Option(names = ["--contract-file"], description = ["Contract file path"], required = false)
+        var contractFile: File? = null
+
+        @Option(
+            names = ["--filter-name"],
+            description = ["Use only APIs with this value in their name"],
+            defaultValue = "\${env:SPECMATIC_FILTER_NAME}",
+            hidden = true
+        )
+        var filterName: String = ""
+
+        @Option(
+            names = ["--filter-not-name"],
+            description = ["Use only APIs which do not have this value in their name"],
+            defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}",
+            hidden = true
+        )
+        var filterNotName: String = ""
+
+        @Option(names = ["--debug"], description = ["Debug logs"])
+        var verbose = false
+
+        @Option(names = ["--dictionary"], description = ["External Dictionary File Path"])
+        var dictFile: File? = null
+
+        @Option(names = ["--testBaseURL"], description = ["The baseURL of system to test"], required = false)
+        var testBaseURL: String? = null
+
+        @Option(
+            names = ["--allow-only-mandatory-keys-in-payload"],
+            description = ["Generate examples with only mandatory keys in the json request and response payloads"],
+            required = false
+        )
+        var allowOnlyMandatoryKeysInJSONObject: Boolean = false
+
+        var server: ExamplesInteractiveServer? = null
+
+        override fun call() {
+            configureLogger(verbose)
+
+            try {
+                if (contractFile != null && !contractFile!!.exists())
+                    exitWithMessage("Could not find file ${contractFile!!.path}")
+
+                val host = "0.0.0.0"
+                val port = 9001
+                server = ExamplesInteractiveServer(
+                    host,
+                    port,
+                    testBaseURL,
+                    contractFile,
+                    filterName,
+                    filterNotName,
+                    filter,
+                    dictFile,
+                    allowOnlyMandatoryKeysInJSONObject
+                )
+                addShutdownHook()
+
+                consoleLog(StringLog("Examples Interactive server is running on ${consolePrintableURL(host, port)}/_specmatic/examples. Ctrl + C to stop."))
+                while (true) sleep(10000)
+            } catch (e: Exception) {
+                logger.log(exceptionCauseMessage(e))
+                exitWithMessage(e.message.orEmpty())
+            }
+        }
+
+        private fun addShutdownHook() {
+            Runtime.getRuntime().addShutdownHook(object : Thread() {
+                override fun run() {
+                    try {
+                        println("Shutting down examples interactive server...")
+                        server?.close()
+                    } catch (e: InterruptedException) {
+                        currentThread().interrupt()
+                    } catch (e: Throwable) {
+                        logger.log(e)
+                    }
+                }
+            })
+        }
     }
 
 }

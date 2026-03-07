@@ -37,5 +37,19 @@ object SpecmaticCoreSubcommands : CliConfigurer {
         McpBaseCommand(),
         ValidateCommand(),
         *ReporterSubcommands.subcommands(),
+        // Backported commands
+        DifferenceCommand(),
+        InstallCommand(),
+        GraphCommand(),
+        MergeCommand(),
+        ToOpenAPICommand(),
+        ReDeclaredAPICommand(),
+        BundleCommand(),
+        PushCommand(),
+        SubscribeCommand(),
+        CompatibleCommand(),
+        ValidateViaLogs(),
+        SamplesCommand(),
+        VirtualServiceCommand(),
     )
 }
